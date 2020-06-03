@@ -6,6 +6,8 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import twitter4j.{FilterQuery, StallWarning, Status, StatusDeletionNotice, StatusListener, TwitterStream, TwitterStreamFactory}
 import twitter4j.conf.ConfigurationBuilder
 
+case class TwitterData(timestamp:Long, hashTags:Array[String])
+
 object TwitterKafkaProducer {
 
   def getProducerObject(): KafkaProducer[String, String] = {
@@ -17,10 +19,10 @@ object TwitterKafkaProducer {
   }
 
   def connectToTwitter(): TwitterStream = {
-    val consumerKey = "bK2GiK2vn48WbAJec5yPBIJfp"
-    val consumerSecret = "sZvjGw1qwuCMbvwEtGlRKZ1FuM0UYP8Cxnhgc7Iws2CecjCnga"
-    val accessToken = "2148607874-2qCJWKdnUaMi4P0M0IFKHyhoiBzdowaupE43NWl"
-    val accessTokenSecret = "jkfBGhu3n4OIS17fhko4pXs6jvfGRVs0StyHx1iIlG5xA"
+    val consumerKey = "QGYUkFHX4guxn0t1B3Pq4BPYu"
+    val consumerSecret = "8yPbrYhqbi2VXHsZTZ27DZJhBMx0ZBfQk3P2XtqguPesfs8Ioo"
+    val accessToken = "2148607874-SORqD2SgMttE23VlmzHV1xZVjZS5JrA7pz25VgK"
+    val accessTokenSecret = "4tYxQ5jYfLT90wbBwV5xgQmYGyTmT1Emsxf69Lf6Dnohi"
 
     val cb = new ConfigurationBuilder()
     cb.setDebugEnabled(true)
@@ -36,7 +38,7 @@ object TwitterKafkaProducer {
   }
 
   def main(args: Array[String]): Unit = {
-    val topicName = "twitter-data";
+    val topicName = "twitter-data1";
     val kafkaProducer = getProducerObject()
     val streamFactory = connectToTwitter();
 
@@ -45,11 +47,19 @@ object TwitterKafkaProducer {
 
         val hasTags = status.getHashtagEntities
         if(hasTags.length==0) return ;
+
         var str = "";
+        val timeStamp = status.getCreatedAt.getTime;
+        var jsonString = "{\"timeStamp\":" + timeStamp +",\"hashTags\":["
+
         hasTags.foreach(t => {
-          str += t.getText + " ";
+          str = str + "\""+ t.getText + "\","
         })
-        val producerRecord = new ProducerRecord[String, String](topicName, status.getCreatedAt.getTime.toString, str)
+
+        str = str.substring(0, str.length-1) + "]}"
+        jsonString = jsonString + str
+
+        val producerRecord = new ProducerRecord[String, String](topicName, status.getCreatedAt.getTime.toString, jsonString)
         kafkaProducer.send(producerRecord);
       }
 
